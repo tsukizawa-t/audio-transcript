@@ -1,0 +1,30 @@
+{
+  "name": "audio-transcript",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MP3音声ファイルをアップロードして英語の文字起こし（段落分け）と日本語訳を生成するサーバーレスWebアプリ",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "14.2.35",
+    "openai": "4.68.4",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.16.11",
+    "@types/react": "18.3.11",
+    "@types/react-dom": "18.3.1",
+    "eslint": "8.57.1",
+    "eslint-config-next": "14.2.35",
+    "typescript": "5.6.3"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  }
+}
