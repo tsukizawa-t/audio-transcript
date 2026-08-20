@@ -4,10 +4,17 @@ export interface TranscribeAudioInput {
   readonly data: Buffer;
 }
 
+export interface KeyPhraseDto {
+  readonly phrase: string;
+  readonly meaningJa: string;
+  readonly noteJa: string;
+}
+
 export interface ParagraphDto {
   readonly index: number;
   readonly originalText: string;
   readonly translatedText: string;
+  readonly keyPhrases: KeyPhraseDto[];
   readonly startTime: number;
   readonly endTime: number;
 }

@@ -37,10 +37,10 @@ export class TranscriptionFailedError extends DomainError {
   }
 }
 
-export class TranslationFailedError extends DomainError {
+export class ParagraphAnnotationFailedError extends DomainError {
   constructor(cause: unknown) {
     super(
-      `Translation failed: ${
+      `Failed to translate/annotate paragraph: ${
         cause instanceof Error ? cause.message : String(cause)
       }`
     );

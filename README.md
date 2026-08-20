@@ -1,11 +1,14 @@
 # audio-transcript
 
-A serverless web app for English learning. Upload an MP3 audio file and it will:
+A serverless web app for IELTS Listening preparation. Upload an MP3 audio file and it will:
 
 1. **Transcribe the audio in English** (using the Whisper API)
 2. Detect **pauses (silence gaps)** in speech and **split the transcript into paragraphs**
 3. **Automatically translate each paragraph into Japanese**, shown below the original text
-4. Let you **play the audio back with a waveform player** — click to seek, change speed,
+4. **Highlight words and phrases worth memorizing for IELTS Listening 7.0** directly in
+   the script, and explain each one in Japanese right underneath — so while you listen
+   and follow along, you immediately see what matters and what it means
+5. Let you **play the audio back with a waveform player** — click to seek, change speed,
    and use keyboard shortcuts
 
 Files are uploaded directly from the browser to [Vercel Blob](https://vercel.com/docs/storage/vercel-blob)
@@ -27,9 +30,14 @@ required.
   - Click anywhere on the waveform to seek and start playback from that point
   - Adjustable playback speed (0.5x–2.0x)
   - Keyboard shortcuts: `Space` = play/pause, `←` = back 3s, `→` = forward 3s
-- **Transcript**
+- **Transcript & IELTS study aids**
   - English transcript automatically segmented into paragraphs at natural pauses
   - Japanese translation of each paragraph shown directly below it
+  - Key words/phrases relevant to IELTS Listening 7.0 (collocations, phrasal verbs,
+    signposting language, academic vocabulary, idioms) are highlighted inline in the
+    original text and listed underneath with a Japanese meaning and usage note
+  - Both the translation and the key-phrase list come from a single OpenAI call per
+    paragraph — no extra API round trips
 
 ## Architecture
 

@@ -2,20 +2,19 @@ import type { AudioFile } from '../../domain/entities/AudioFile';
 import { validateAudioFile } from '../../domain/services/AudioFileValidator';
 import { ParagraphSegmenter } from '../../domain/services/ParagraphSegmenter';
 import type { TranscriptionService } from '../../domain/ports/TranscriptionService';
-import type { TranslationService } from '../../domain/ports/TranslationService';
-import { TranslationFailedError } from '../../domain/errors';
+import type { ParagraphAnnotationService } from '../../domain/ports/ParagraphAnnotationService';
+import { ParagraphAnnotationFailedError } from '../../domain/errors';
 import type {
   TranscribeAudioInput,
   TranscribeAudioOutput,
   ParagraphDto,
 } from '../dto/TranscribeAudioDto';
 
-const TARGET_LANGUAGE = 'ja';
-
 /**
  * The application use case that orchestrates the full flow:
  * "Upload MP3 -> transcribe in English -> segment into paragraphs by
- *  silence gaps -> translate each paragraph into Japanese".
+ *  silence gaps -> translate each paragraph into Japanese and extract
+ *  IELTS-relevant key phrases".
  *
  * This class depends only on ports (interfaces), never on concrete
  * external services such as Whisper or GPT (dependency inversion).
@@ -24,7 +23,7 @@ const TARGET_LANGUAGE = 'ja';
 export class TranscribeAudioUseCase {
   constructor(
     private readonly transcriptionService: TranscriptionService,
-    private readonly translationService: TranslationService,
+    private readonly annotationService: ParagraphAnnotationService,
     private readonly paragraphSegmenter: ParagraphSegmenter,
     private readonly maxUploadSizeBytes: number
   ) {}
@@ -42,24 +41,28 @@ export class TranscribeAudioUseCase {
     const raw = await this.transcriptionService.transcribe(audio);
     const paragraphs = this.paragraphSegmenter.segment(raw.segments);
 
-    const translated = await Promise.all(
+    const annotated = await Promise.all(
       paragraphs.map(async (paragraph) => {
         try {
-          const translatedText = await this.translationService.translate(
-            paragraph.originalText,
-            TARGET_LANGUAGE
+          const annotation = await this.annotationService.annotate(
+            paragraph.originalText
           );
-          return { ...paragraph, translatedText };
+          return {
+            ...paragraph,
+            translatedText: annotation.translatedText,
+            keyPhrases: annotation.keyPhrases,
+          };
         } catch (cause) {
-          throw new TranslationFailedError(cause);
+          throw new ParagraphAnnotationFailedError(cause);
         }
       })
     );
 
-    const paragraphDtos: ParagraphDto[] = translated.map((p) => ({
+    const paragraphDtos: ParagraphDto[] = annotated.map((p) => ({
       index: p.index,
       originalText: p.originalText,
       translatedText: p.translatedText ?? '',
+      keyPhrases: p.keyPhrases,
       startTime: p.startTime,
       endTime: p.endTime,
     }));

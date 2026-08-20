@@ -1,6 +1,6 @@
 import { loadConfig } from './env';
 import { OpenAIWhisperTranscriptionService } from '../openai/OpenAIWhisperTranscriptionService';
-import { OpenAITranslationService } from '../openai/OpenAITranslationService';
+import { OpenAIParagraphAnnotationService } from '../openai/OpenAIParagraphAnnotationService';
 import { ParagraphSegmenter } from '../../domain/services/ParagraphSegmenter';
 import { TranscribeAudioUseCase } from '../../application/usecases/TranscribeAudioUseCase';
 
@@ -15,7 +15,7 @@ export function createTranscribeAudioUseCase(): TranscribeAudioUseCase {
   const transcriptionService = new OpenAIWhisperTranscriptionService(
     config.openaiApiKey
   );
-  const translationService = new OpenAITranslationService(
+  const annotationService = new OpenAIParagraphAnnotationService(
     config.openaiApiKey
   );
   const paragraphSegmenter = new ParagraphSegmenter(
@@ -24,7 +24,7 @@ export function createTranscribeAudioUseCase(): TranscribeAudioUseCase {
 
   return new TranscribeAudioUseCase(
     transcriptionService,
-    translationService,
+    annotationService,
     paragraphSegmenter,
     config.maxUploadSizeBytes
   );

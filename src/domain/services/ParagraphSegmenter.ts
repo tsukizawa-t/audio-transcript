@@ -60,6 +60,7 @@ export class ParagraphSegmenter {
       index,
       originalText,
       translatedText: null,
+      keyPhrases: [],
       startTime: first.start,
       endTime: last.end,
     };
