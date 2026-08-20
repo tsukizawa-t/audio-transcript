@@ -2,7 +2,7 @@
   "name": "audio-transcript",
   "version": "1.0.0",
   "private": true,
-  "description": "MP3音声ファイルをアップロードして英語の文字起こし（段落分け）と日本語訳を生成するサーバーレスWebアプリ",
+  "description": "A serverless web app that transcribes English MP3 audio into paragraphs and translates each paragraph into Japanese",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -1,6 +1,7 @@
 /**
- * アップロードされた音声ファイルを表す値オブジェクト。
- * Web APIのFileやNode.jsのBufferといったインフラの型に依存しない。
+ * A value object representing an uploaded audio file. Deliberately
+ * independent of infrastructure types such as the Web API's File or
+ * Node.js's Buffer.
  */
 export interface AudioFile {
   readonly filename: string;

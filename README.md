@@ -1,114 +1,129 @@
 # audio-transcript
 
-MP3音声ファイルをアップロードすると、
+A serverless web app for English learning. Upload an MP3 audio file and it will:
 
-1. **英語の文字起こし**（Whisper APIを使用）
-2. 発話の**間（無音区間）を検出して段落分け**
-3. 各段落を**日本語に自動翻訳**して原文の下に表示
+1. **Transcribe the audio in English** (using the Whisper API)
+2. Detect **pauses (silence gaps)** in speech and **split the transcript into paragraphs**
+3. **Automatically translate each paragraph into Japanese**, shown below the original text
+4. Let you **play the audio back with a waveform player** — click to seek, change speed,
+   and use keyboard shortcuts
 
-するサーバーレスWebアプリです。Vercel上でNext.js App Routerの
-Route Handler（＝サーバーレス関数）として動作し、バックエンド用サーバーを
-別途用意する必要はありません。
+It runs as a Next.js App Router Route Handler (i.e. a serverless function) on Vercel,
+so no separate backend server is required.
 
-## アーキテクチャ
+## Features
 
-クリーンアーキテクチャに基づき、依存の方向が **外側 → 内側** に一方向になるよう
-レイヤーを分離しています。
+- **Waveform player**
+  - Renders the uploaded MP3 as a waveform (decoded client-side with the Web Audio API)
+  - The waveform changes color as playback progresses (played vs. unplayed)
+  - Click anywhere on the waveform to seek and start playback from that point
+  - Adjustable playback speed (0.5x–2.0x)
+  - Keyboard shortcuts: `Space` = play/pause, `←` = back 3s, `→` = forward 3s
+- **Transcript**
+  - English transcript automatically segmented into paragraphs at natural pauses
+  - Japanese translation of each paragraph shown directly below it
+
+## Architecture
+
+The codebase follows Clean Architecture, keeping dependencies pointing in a single
+direction: **outer layers depend on inner layers, never the other way around.**
 
 ```
 src/
-  domain/            ← 最内層。他のどの層にも依存しない
-    entities/        エンティティ・値オブジェクト（Paragraph, AudioFile 等）
-    ports/            外部サービスへの抽象境界（インターフェース）
-    services/         純粋なドメインロジック（段落分け、ファイル検証）
-    errors.ts         ドメイン固有の例外
+  domain/            <- Innermost layer. Depends on nothing else.
+    entities/        Entities & value objects (Paragraph, AudioFile, etc.)
+    ports/            Abstract boundaries to external services (interfaces)
+    services/         Pure domain logic (paragraph segmentation, file validation)
+    errors.ts         Domain-specific exceptions
 
-  application/        ドメイン層のみに依存する
-    usecases/          TranscribeAudioUseCase（ユースケースの手続きを記述）
-    dto/               ユースケースの入出力データ構造
+  application/        Depends only on the domain layer
+    usecases/          TranscribeAudioUseCase (orchestrates the use case)
+    dto/               Input/output data structures for the use case
 
-  infrastructure/     application/domain層のポートを実装する
-    openai/            Whisper・GPTを叩く具体的な実装（差し替え可能）
-    config/            環境変数の読み込み、DIコンテナ（コンポジションルート）
+  infrastructure/     Implements the ports defined by application/domain
+    openai/            Concrete Whisper/GPT integrations (swappable)
+    config/            Environment variable loading, DI container (composition root)
 
-app/                  プレゼンテーション層（Next.js App Router）
-  api/transcribe/route.ts   HTTPリクエストを受け、ユースケースを呼ぶだけの薄いController
-  page.tsx / layout.tsx     画面
+app/                  Presentation layer (Next.js App Router)
+  api/transcribe/route.ts   Thin HTTP controller — parses the request, calls the use case
+  page.tsx / layout.tsx     Pages
 
-components/          UIコンポーネント（クライアントサイド）
+components/          UI components (client-side)
+  audio/              Waveform player and its Web Audio API helper
 ```
 
-**依存性逆転**: `application`層は`OpenAIWhisperTranscriptionService`のような
-具象クラスを知らず、`domain/ports`のインターフェースにのみ依存します。実装の
-差し替え（例: WhisperからGoogle Speech-to-Textへの変更）は`infrastructure`層の
-追加とコンポジションルート（`src/infrastructure/config/container.ts`）の変更のみで完結し、
-`domain`・`application`層は一切変更不要です。
+**Dependency inversion**: the `application` layer never imports a concrete class such as
+`OpenAIWhisperTranscriptionService` — it only depends on the interfaces in `domain/ports`.
+Swapping an implementation (e.g. moving from Whisper to Google Speech-to-Text) only
+requires adding a new class under `infrastructure/` and updating the composition root
+(`src/infrastructure/config/container.ts`); the `domain` and `application` layers never
+need to change.
 
-## 段落分けのロジック
+## Paragraph segmentation logic
 
-`src/domain/services/ParagraphSegmenter.ts` が、Whisperから得られる発話セグメント
-（開始・終了時刻付き）を走査し、**前のセグメントの終了時刻から次のセグメントの
-開始時刻までの間隔が `PARAGRAPH_GAP_THRESHOLD_SEC`（既定1.5秒）以上**であれば、
-そこを段落の区切りとみなします。話者が一息ついた箇所・話題が変わる間などが
-自然に段落として区切られます。
+`src/domain/services/ParagraphSegmenter.ts` walks through the timestamped speech
+segments returned by Whisper. Whenever **the gap between the end of one segment and
+the start of the next is greater than or equal to `PARAGRAPH_GAP_THRESHOLD_SEC`**
+(1.5 seconds by default), it treats that as a paragraph break. This naturally splits
+the transcript wherever the speaker pauses or the topic shifts.
 
-## セットアップ
+## Setup
 
-### 1. 依存関係のインストール
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 2. 環境変数の設定
+### 2. Configure environment variables
 
 ```bash
 cp .env.example .env.local
 ```
 
-`.env.local` を開き、OpenAIのAPIキーを設定してください。
+Open `.env.local` and set your OpenAI API key.
 
-| 変数名 | 必須 | 説明 |
+| Variable | Required | Description |
 | --- | --- | --- |
-| `OPENAI_API_KEY` | ✅ | https://platform.openai.com/api-keys で発行 |
-| `PARAGRAPH_GAP_THRESHOLD_SEC` | - | 段落区切りとみなす無音間隔（秒）。既定 `1.5` |
-| `MAX_UPLOAD_SIZE_MB` | - | アップロード上限MB。既定 `25`（Whisper APIの上限） |
+| `OPENAI_API_KEY` | ✅ | Generate one at https://platform.openai.com/api-keys |
+| `PARAGRAPH_GAP_THRESHOLD_SEC` | - | Silence gap (seconds) treated as a paragraph break. Default `1.5` |
+| `MAX_UPLOAD_SIZE_MB` | - | Max upload size in MB. Default `25` (the Whisper API's own limit) |
 
-### 3. ローカル起動
+### 3. Run locally
 
 ```bash
 npm run dev
 ```
 
-http://localhost:3000 を開いてMP3ファイルをアップロードしてください。
+Open http://localhost:3000 and upload an MP3 file.
 
-## Vercelへのデプロイ
+## Deploying to Vercel
 
-1. このリポジトリをVercelにインポート
-2. Project Settings → Environment Variables に `OPENAI_API_KEY` を設定
-3. デプロイ
+1. Import this repository into Vercel
+2. Set `OPENAI_API_KEY` under Project Settings → Environment Variables
+3. Deploy
 
-Route Handler は `export const runtime = 'nodejs'` を指定しているため、
-Node.jsランタイムのサーバーレス関数としてデプロイされます。
+The Route Handler specifies `export const runtime = 'nodejs'`, so it is deployed as a
+Node.js runtime serverless function.
 
-### 既知の制約
+### Known limitations
 
-- **Vercelのリクエストボディ上限**: Hobby/Proプランのサーバーレス関数は
-  リクエストボディに上限（無料枠は4.5MB程度）があります。大きめのMP3を
-  扱いたい場合は [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) 等に
-  一度アップロードしてからサーバー側で取得する方式への変更を検討してください。
-- **実行時間の上限**: `maxDuration` を60秒に設定していますが、プランによって
-  上限が異なります。長時間の音声を扱う場合はプランの確認、または
-  非同期ジョブ化（キュー＋Webhook通知）を検討してください。
-- Whisper API自体のファイルサイズ上限は25MBです。
+- **Vercel request body size limit**: serverless functions on the Hobby/Pro plans have
+  a request body size limit (roughly 4.5MB on the free tier). If you need to handle
+  larger MP3 files, consider uploading to [Vercel Blob](https://vercel.com/docs/storage/vercel-blob)
+  first and having the server fetch it from there instead.
+- **Execution time limit**: `maxDuration` is set to 60 seconds, but the actual cap
+  depends on your plan. For long recordings, check your plan's limits or consider
+  making transcription an async job (queue + webhook notification).
+- The Whisper API itself has a 25MB file size limit.
 
-## 動作確認（型チェック・ビルド）
+## Verifying the build (type-check & build)
 
 ```bash
 npm run typecheck
 npm run build
 ```
 
-## ライセンス
+## License
 
 MIT

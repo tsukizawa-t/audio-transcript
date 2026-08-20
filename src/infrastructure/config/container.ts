@@ -5,9 +5,9 @@ import { ParagraphSegmenter } from '../../domain/services/ParagraphSegmenter';
 import { TranscribeAudioUseCase } from '../../application/usecases/TranscribeAudioUseCase';
 
 /**
- * 依存性注入のコンポジションルート。
- * presentation層（Route Handler）はこの関数経由でのみユースケースを取得し、
- * infrastructure層の具象クラスを直接importしない。
+ * Dependency injection composition root. The presentation layer (Route
+ * Handler) obtains the use case only through this function and never
+ * imports concrete infrastructure classes directly.
  */
 export function createTranscribeAudioUseCase(): TranscribeAudioUseCase {
   const config = loadConfig();

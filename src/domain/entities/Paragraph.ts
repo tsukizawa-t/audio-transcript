@@ -1,17 +1,18 @@
 /**
- * 複数のTranscriptSegmentを、無音区間（間隔）に基づきまとめた段落。
- * 表示・翻訳の単位となるドメインエンティティ。
+ * A paragraph made up of one or more TranscriptSegments, grouped by
+ * silence gaps in the audio. This is the unit used for display and
+ * translation.
  */
 export interface Paragraph {
-  /** 1始まりの段落番号（表示順） */
+  /** 1-based paragraph number (display order) */
   readonly index: number;
-  /** 段落の原文（英語） */
+  /** Original text of the paragraph (source language, English) */
   readonly originalText: string;
-  /** 段落の日本語訳。翻訳前は null */
+  /** Japanese translation. null before translation has been performed */
   readonly translatedText: string | null;
-  /** 段落開始時刻（秒） */
+  /** Paragraph start time (seconds) */
   readonly startTime: number;
-  /** 段落終了時刻（秒） */
+  /** Paragraph end time (seconds) */
   readonly endTime: number;
 }
 

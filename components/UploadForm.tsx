@@ -23,7 +23,7 @@ export function UploadForm() {
       return;
     }
     if (!picked.name.toLowerCase().endsWith('.mp3')) {
-      setErrorMessage('.mp3ファイルを選択してください');
+      setErrorMessage('Please select a .mp3 file');
       setFile(null);
       return;
     }
@@ -61,14 +61,14 @@ export function UploadForm() {
         const body = await response.json();
 
         if (!response.ok) {
-          throw new Error(body?.error ?? '不明なエラーが発生しました');
+          throw new Error(body?.error ?? 'An unknown error occurred');
         }
 
         setResult(body as TranscribeAudioOutput);
         setStatus('idle');
       } catch (error) {
         setErrorMessage(
-          error instanceof Error ? error.message : '不明なエラーが発生しました'
+          error instanceof Error ? error.message : 'An unknown error occurred'
         );
         setStatus('error');
       }
@@ -97,9 +97,9 @@ export function UploadForm() {
             accept=".mp3,audio/mpeg"
             onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
           />
-          <label htmlFor="audio-input">クリックしてMP3ファイルを選択</label>
-          <div>またはここにドラッグ＆ドロップ</div>
-          {file && <div className="file-name">選択中: {file.name}</div>}
+          <label htmlFor="audio-input">Click to select an MP3 file</label>
+          <div>or drag and drop it here</div>
+          {file && <div className="file-name">Selected: {file.name}</div>}
         </div>
 
         {file && <WaveformPlayer file={file} key={file.name + file.size} />}
@@ -109,14 +109,14 @@ export function UploadForm() {
           className="submit-button"
           disabled={!file || isUploading}
         >
-          {isUploading ? '文字起こし中…' : '文字起こしを開始'}
+          {isUploading ? 'Transcribing…' : 'Start Transcription'}
         </button>
 
         {isUploading && (
           <div className="status-row">
             <span className="spinner" aria-hidden />
             <span>
-              音声の長さによっては数十秒〜数分かかることがあります
+              This can take anywhere from a few seconds to a few minutes, depending on the audio length
             </span>
           </div>
         )}

@@ -2,8 +2,9 @@ import type { AudioFile } from '../entities/AudioFile';
 import type { RawTranscription } from '../entities/TranscriptionResult';
 
 /**
- * 音声認識（ASR）サービスへの抽象境界。
- * Whisper等、具体的な実装はinfrastructure層に置き、この契約に従わせる。
+ * Abstract boundary to a speech recognition (ASR) service.
+ * Concrete implementations (e.g. Whisper) live in the infrastructure
+ * layer and must conform to this contract.
  */
 export interface TranscriptionService {
   transcribe(audio: AudioFile): Promise<RawTranscription>;

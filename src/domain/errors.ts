@@ -7,30 +7,30 @@ export class DomainError extends Error {
 
 export class UnsupportedFileTypeError extends DomainError {
   constructor(filename: string) {
-    super(`対応していないファイル形式です: ${filename}（.mp3のみ対応）`);
+    super(`Unsupported file type: ${filename} (only .mp3 is supported)`);
   }
 }
 
 export class FileTooLargeError extends DomainError {
   constructor(sizeBytes: number, maxBytes: number) {
     super(
-      `ファイルサイズが上限を超えています: ${(sizeBytes / 1024 / 1024).toFixed(
+      `File size exceeds the limit: ${(sizeBytes / 1024 / 1024).toFixed(
         1
-      )}MB（上限 ${(maxBytes / 1024 / 1024).toFixed(1)}MB）`
+      )}MB (limit ${(maxBytes / 1024 / 1024).toFixed(1)}MB)`
     );
   }
 }
 
 export class EmptyFileError extends DomainError {
   constructor() {
-    super('空のファイルはアップロードできません');
+    super('Cannot upload an empty file');
   }
 }
 
 export class TranscriptionFailedError extends DomainError {
   constructor(cause: unknown) {
     super(
-      `文字起こしに失敗しました: ${
+      `Transcription failed: ${
         cause instanceof Error ? cause.message : String(cause)
       }`
     );
@@ -40,7 +40,7 @@ export class TranscriptionFailedError extends DomainError {
 export class TranslationFailedError extends DomainError {
   constructor(cause: unknown) {
     super(
-      `翻訳に失敗しました: ${
+      `Translation failed: ${
         cause instanceof Error ? cause.message : String(cause)
       }`
     );

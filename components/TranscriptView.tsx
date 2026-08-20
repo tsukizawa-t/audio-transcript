@@ -10,8 +10,9 @@ export function TranscriptView({ result }: { result: TranscribeAudioOutput }) {
   return (
     <section className="result">
       <div className="result-meta">
-        検出言語: {result.language} ／ 音声長: {formatTime(result.durationSec)}
-        ／ 段落数: {result.paragraphs.length}
+        Detected language: {result.language} / Duration:{' '}
+        {formatTime(result.durationSec)} / Paragraphs:{' '}
+        {result.paragraphs.length}
       </div>
 
       {result.paragraphs.map((p) => (

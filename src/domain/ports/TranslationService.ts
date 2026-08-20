@@ -1,11 +1,11 @@
 /**
- * テキスト翻訳サービスへの抽象境界。
+ * Abstract boundary to a text translation service.
  */
 export interface TranslationService {
   /**
-   * テキストを指定言語へ翻訳する。
-   * @param text 翻訳対象テキスト
-   * @param targetLanguage ISO 639-1言語コード（例: "ja"）
+   * Translate text into the target language.
+   * @param text Text to translate
+   * @param targetLanguage ISO 639-1 language code (e.g. "ja")
    */
   translate(text: string, targetLanguage: string): Promise<string>;
 }

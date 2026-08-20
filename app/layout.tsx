@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'MP3文字起こし＆日本語翻訳',
+  title: 'MP3 Transcript & Japanese Translation',
   description:
-    'MP3音声ファイルをアップロードして、英語の文字起こし（段落分け）と日本語訳を生成します。',
+    'Upload an MP3 audio file to get an English transcript (segmented into paragraphs) with a Japanese translation.',
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja">
+    <html lang="en">
       <body>{children}</body>
     </html>
   );

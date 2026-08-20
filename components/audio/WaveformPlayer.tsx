@@ -47,7 +47,7 @@ export function WaveformPlayer({ file }: { file: File }) {
     return () => URL.revokeObjectURL(objectUrl);
   }, [objectUrl]);
 
-  // 波形データの生成
+  // Generate waveform data
   useEffect(() => {
     let cancelled = false;
     setPeaks(null);
@@ -59,7 +59,7 @@ export function WaveformPlayer({ file }: { file: File }) {
     };
   }, [file]);
 
-  // キャンバス幅をコンテナに追従させる
+  // Keep the canvas width in sync with its container
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -103,7 +103,7 @@ export function WaveformPlayer({ file }: { file: File }) {
       );
     }
 
-    // 再生位置ライン
+    // Playhead line
     const playheadX = progress * canvasWidth;
     ctx.strokeStyle = '#e7ecf5';
     ctx.lineWidth = 1;
@@ -117,7 +117,7 @@ export function WaveformPlayer({ file }: { file: File }) {
     draw();
   }, [draw]);
 
-  // 再生中は毎フレーム現在時刻を更新して波形の色分けを進める
+  // While playing, update the current time every frame to advance the waveform coloring
   useEffect(() => {
     if (!isPlaying) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -188,7 +188,7 @@ export function WaveformPlayer({ file }: { file: File }) {
     setPlaybackRate(clamped);
   }, []);
 
-  // キーボードショートカット: Space=再生/停止, ←=3秒戻る, →=3秒進む
+  // Keyboard shortcuts: Space = play/pause, ArrowLeft = back 3s, ArrowRight = forward 3s
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isTypingTarget(event.target)) return;
@@ -232,7 +232,7 @@ export function WaveformPlayer({ file }: { file: File }) {
         style={{ width: '100%', height: 110 }}
         onClick={handleCanvasClick}
       />
-      {!peaks && <div className="waveform-loading">波形を解析中…</div>}
+      {!peaks && <div className="waveform-loading">Analyzing waveform…</div>}
 
       <button
         type="button"
@@ -263,13 +263,13 @@ export function WaveformPlayer({ file }: { file: File }) {
 
       <div className="seek-row">
         <button type="button" onClick={() => seekBy(-SEEK_STEP_SEC)}>
-          ◀ 3秒
+          ◀ 3s
         </button>
         <span className="seek-hint">
-          Space: 再生/停止　←: 3秒戻る　→: 3秒進む
+          Space: play/pause &nbsp; ←: back 3s &nbsp; →: forward 3s
         </span>
         <button type="button" onClick={() => seekBy(SEEK_STEP_SEC)}>
-          3秒 ▶
+          3s ▶
         </button>
       </div>
     </div>

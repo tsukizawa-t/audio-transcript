@@ -1,13 +1,14 @@
 /**
- * 音声認識エンジンが返す最小単位の発話区間。
- * Whisper等のASRサービスの出力形式に依存しない、ドメイン内の値オブジェクト。
+ * The smallest unit of a spoken segment returned by the speech recognition
+ * engine. This is a domain value object that does not depend on any
+ * specific ASR provider's output format.
  */
 export interface TranscriptSegment {
-  /** セグメント内のテキスト（原文・英語想定） */
+  /** Text spoken in this segment (source language, expected to be English) */
   readonly text: string;
-  /** 音声内の開始時刻（秒） */
+  /** Start time within the audio (seconds) */
   readonly start: number;
-  /** 音声内の終了時刻（秒） */
+  /** End time within the audio (seconds) */
   readonly end: number;
 }
 
@@ -18,9 +19,7 @@ export function createTranscriptSegment(
 ): TranscriptSegment {
   const trimmed = text.trim();
   if (start < 0 || end < start) {
-    throw new RangeError(
-      `不正なセグメント時間です: start=${start}, end=${end}`
-    );
+    throw new RangeError(`Invalid segment timing: start=${start}, end=${end}`);
   }
   return { text: trimmed, start, end };
 }

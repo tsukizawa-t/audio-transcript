@@ -3,13 +3,14 @@ import type { TranslationService } from '../../domain/ports/TranslationService';
 import { TranslationFailedError } from '../../domain/errors';
 
 const LANGUAGE_NAMES: Record<string, string> = {
-  ja: '日本語',
-  en: '英語',
+  ja: 'Japanese',
+  en: 'English',
 };
 
 /**
- * OpenAI Chat Completions APIを用いたTranslationServiceの実装。
- * domain/ports/TranslationService の契約を満たす。
+ * TranslationService implementation backed by the OpenAI Chat
+ * Completions API. Satisfies the contract defined in
+ * domain/ports/TranslationService.
  */
 export class OpenAITranslationService implements TranslationService {
   private readonly client: OpenAI;
@@ -34,8 +35,8 @@ export class OpenAITranslationService implements TranslationService {
           {
             role: 'system',
             content:
-              `あなたはプロの翻訳者です。与えられたテキストを自然な${targetLanguageName}に翻訳してください。` +
-              '訳文のみを出力し、説明や前置き、引用符は一切付けないでください。',
+              `You are a professional translator. Translate the given text into natural ${targetLanguageName}. ` +
+              'Output only the translation, with no preamble, explanation, or quotation marks.',
           },
           { role: 'user', content: text },
         ],

@@ -1,7 +1,8 @@
 /**
- * 音声ファイルをWeb Audio APIでデコードし、波形描画用のピーク値配列を生成する。
- * ブラウザAPI(AudioContext)に依存するため、UIコンポーネント専用のヘルパーとして
- * components配下に置く（domain/applicationからは参照されない）。
+ * Decodes an audio file using the Web Audio API and produces an array of
+ * peak values used to draw the waveform. This depends on browser APIs
+ * (AudioContext), so it lives alongside the UI component under
+ * components/ and is never referenced from domain/application.
  */
 export async function decodeWaveformPeaks(
   file: File,
@@ -26,7 +27,8 @@ export async function decodeWaveformPeaks(
 }
 
 function computePeaks(audioBuffer: AudioBuffer, barCount: number): number[] {
-  // 複数チャンネルがある場合は平均を取って1チャンネル分にまとめる
+  // Average across channels when there is more than one, collapsing to a
+  // single channel for the waveform.
   const channelCount = audioBuffer.numberOfChannels;
   const length = audioBuffer.length;
   const samplesPerBar = Math.max(1, Math.floor(length / barCount));

@@ -2,18 +2,20 @@ import type { Paragraph } from '../entities/Paragraph';
 import type { TranscriptSegment } from '../entities/TranscriptSegment';
 
 /**
- * ASRが返す発話セグメント列を、無音区間（ポーズ）の長さに基づいて
- * 段落（Paragraph）へグルーピングするドメインサービス。
+ * Domain service that groups the sequence of speech segments returned by
+ * an ASR engine into paragraphs, based on the length of silence gaps
+ * (pauses) between them.
  *
- * ルール:
- *  - 直前セグメントの終了時刻から次セグメントの開始時刻までの間隔が
- *    gapThresholdSec 以上あれば、話の区切りとみなし新しい段落を開始する。
- *  - それ未満の間隔は同一段落として連結する。
+ * Rule:
+ *  - If the gap between the end of the previous segment and the start of
+ *    the next segment is greater than or equal to gapThresholdSec, treat
+ *    it as a natural break and start a new paragraph.
+ *  - Otherwise, merge the segment into the current paragraph.
  */
 export class ParagraphSegmenter {
   constructor(private readonly gapThresholdSec: number) {
     if (gapThresholdSec <= 0) {
-      throw new RangeError('gapThresholdSecは正の数である必要があります');
+      throw new RangeError('gapThresholdSec must be a positive number');
     }
   }
 

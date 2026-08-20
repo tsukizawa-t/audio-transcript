@@ -13,11 +13,13 @@ import type {
 const TARGET_LANGUAGE = 'ja';
 
 /**
- * 「MP3をアップロード → 英語で文字起こし → 無音間隔で段落分け →
- *  各段落を日本語に翻訳」までを統括するアプリケーションのユースケース。
+ * The application use case that orchestrates the full flow:
+ * "Upload MP3 -> transcribe in English -> segment into paragraphs by
+ *  silence gaps -> translate each paragraph into Japanese".
  *
- * 外部サービスの実体（Whisper, GPT等）には依存せず、ポート（インターフェース）
- * のみに依存する（依存性逆転）。実体はinfrastructure層からDIされる。
+ * This class depends only on ports (interfaces), never on concrete
+ * external services such as Whisper or GPT (dependency inversion).
+ * Concrete implementations are injected from the infrastructure layer.
  */
 export class TranscribeAudioUseCase {
   constructor(

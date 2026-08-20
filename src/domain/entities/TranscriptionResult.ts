@@ -1,19 +1,20 @@
 import type { Paragraph } from './Paragraph';
 
 /**
- * 1つの音声ファイルに対する最終的な文字起こし成果物。
+ * The final transcription output produced for a single audio file.
  */
 export interface TranscriptionResult {
-  /** 検出された音声の言語コード（例: "en"） */
+  /** Detected language code of the audio (e.g. "en") */
   readonly language: string;
-  /** 音声の長さ（秒） */
+  /** Audio duration (seconds) */
   readonly durationSec: number;
-  /** 段落分けされたテキスト（原文＋日本語訳） */
+  /** Paragraphs with original text and translation */
   readonly paragraphs: Paragraph[];
 }
 
 /**
- * ASRサービスから取得する、翻訳・段落分け前の生の文字起こし結果。
+ * Raw transcription result returned by the ASR service, before
+ * translation and paragraph segmentation have been applied.
  */
 export interface RawTranscription {
   readonly language: string;

@@ -10,8 +10,8 @@ import {
 } from '../errors';
 
 /**
- * アップロードされた音声ファイルがドメインルールを満たすか検証する。
- * 外部I/Oを持たない純粋なドメインロジック。
+ * Validates that an uploaded audio file satisfies the domain rules.
+ * Pure domain logic with no external I/O.
  */
 export function validateAudioFile(
   audio: AudioFile,

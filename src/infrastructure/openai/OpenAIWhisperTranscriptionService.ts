@@ -19,8 +19,9 @@ interface WhisperVerboseJsonResponse {
 }
 
 /**
- * OpenAI Whisper API (audio.transcriptions) を用いたTranscriptionServiceの実装。
- * domain/ports/TranscriptionService の契約を満たす。
+ * TranscriptionService implementation backed by the OpenAI Whisper API
+ * (audio.transcriptions). Satisfies the contract defined in
+ * domain/ports/TranscriptionService.
  */
 export class OpenAIWhisperTranscriptionService implements TranscriptionService {
   private readonly client: OpenAI;
@@ -39,7 +40,8 @@ export class OpenAIWhisperTranscriptionService implements TranscriptionService {
         file,
         model: 'whisper-1',
         response_format: 'verbose_json',
-        // 原音声(英語)の文字起こしを行う。翻訳は別サービス(GPT)側で行う。
+        // Transcribe the source audio (English) as-is. Translation into
+        // Japanese is handled separately by the translation service (GPT).
       })) as unknown as WhisperVerboseJsonResponse;
 
       const rawSegments = response.segments ?? [];
@@ -47,7 +49,7 @@ export class OpenAIWhisperTranscriptionService implements TranscriptionService {
         createTranscriptSegment(s.text, s.start, s.end)
       );
 
-      // verbose_jsonでsegmentsが取得できない場合のフォールバック
+      // Fallback for cases where verbose_json does not return segments
       if (segments.length === 0 && response.text) {
         segments.push(
           createTranscriptSegment(response.text, 0, response.duration ?? 0)

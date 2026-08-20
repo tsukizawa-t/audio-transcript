@@ -14,8 +14,9 @@ function readNumberEnv(name: string, fallback: number): number {
 let cachedConfig: AppConfig | null = null;
 
 /**
- * 環境変数からアプリ設定を読み込む。未設定の必須項目があれば例外を投げる。
- * サーバーレス関数のコールドスタート時に一度だけ評価されるようキャッシュする。
+ * Loads application configuration from environment variables. Throws if
+ * a required value is missing. Cached so it is evaluated only once per
+ * serverless function cold start.
  */
 export function loadConfig(): AppConfig {
   if (cachedConfig) return cachedConfig;
@@ -23,7 +24,7 @@ export function loadConfig(): AppConfig {
   const openaiApiKey = process.env.OPENAI_API_KEY;
   if (!openaiApiKey) {
     throw new Error(
-      '環境変数 OPENAI_API_KEY が設定されていません。.env.example を参考に設定してください。'
+      'Environment variable OPENAI_API_KEY is not set. See .env.example for reference.'
     );
   }
 
