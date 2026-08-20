@@ -30,6 +30,12 @@ required.
   - Click anywhere on the waveform to seek and start playback from that point
   - Adjustable playback speed (0.5x–2.0x)
   - Keyboard shortcuts: `Space` = play/pause, `←` = back 3s, `→` = forward 3s
+- **Click-to-play transcript**
+  - Click any paragraph to jump playback to the start of that paragraph
+  - While playing, the paragraph currently being spoken is highlighted; the rest
+    are dimmed, so it's easy to follow along
+  - The waveform and the transcript share the same playback state, so seeking from
+    either one stays in sync with the other
 - **Transcript & IELTS study aids**
   - English transcript automatically segmented into paragraphs at natural pauses
   - Japanese translation of each paragraph shown directly below it

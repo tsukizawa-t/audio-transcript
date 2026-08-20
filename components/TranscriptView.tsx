@@ -2,6 +2,7 @@ import type {
   KeyPhraseDto,
   TranscribeAudioOutput,
 } from '@/src/application/dto/TranscribeAudioDto';
+import type { AudioPlayerApi } from './audio/useAudioPlayer';
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -45,7 +46,15 @@ function renderHighlightedText(text: string, keyPhrases: KeyPhraseDto[]) {
   );
 }
 
-export function TranscriptView({ result }: { result: TranscribeAudioOutput }) {
+export function TranscriptView({
+  result,
+  player,
+}: {
+  result: TranscribeAudioOutput;
+  player: AudioPlayerApi;
+}) {
+  const lastIndex = result.paragraphs.length - 1;
+
   return (
     <section className="result">
       <div className="result-meta">
@@ -54,38 +63,69 @@ export function TranscriptView({ result }: { result: TranscribeAudioOutput }) {
         {result.paragraphs.length}
       </div>
 
-      {result.paragraphs.map((p) => (
-        <article key={p.index} className="paragraph">
-          <div className="paragraph-index">
-            #{p.index} ({formatTime(p.startTime)} – {formatTime(p.endTime)})
-          </div>
+      {result.paragraphs.map((p, i) => {
+        const isCurrentParagraph =
+          i === lastIndex
+            ? player.currentTime >= p.startTime
+            : player.currentTime >= p.startTime &&
+              player.currentTime < p.endTime;
 
-          <p className="paragraph-original">
-            {renderHighlightedText(p.originalText, p.keyPhrases)}
-          </p>
+        // Only dim/highlight while something is actually playing, so the
+        // transcript looks normal before playback starts or once paused.
+        const stateClass = player.isPlaying
+          ? isCurrentParagraph
+            ? ' paragraph-active'
+            : ' paragraph-inactive'
+          : '';
 
-          <div className="paragraph-divider" />
+        const handleActivate = () => player.seekToTime(p.startTime, true);
 
-          <p className="paragraph-translated">{p.translatedText}</p>
-
-          {p.keyPhrases.length > 0 && (
-            <div className="key-phrases">
-              <div className="key-phrases-title">
-                IELTS Key Phrases
-              </div>
-              <ul className="key-phrases-list">
-                {p.keyPhrases.map((kp, i) => (
-                  <li className="key-phrase-item" key={i}>
-                    <span className="key-phrase-term">{kp.phrase}</span>
-                    <span className="key-phrase-meaning">{kp.meaningJa}</span>
-                    <span className="key-phrase-note">{kp.noteJa}</span>
-                  </li>
-                ))}
-              </ul>
+        return (
+          <article
+            key={p.index}
+            className={`paragraph${stateClass}`}
+            onClick={handleActivate}
+            role="button"
+            tabIndex={0}
+            aria-label={`Play from paragraph ${p.index}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleActivate();
+              }
+            }}
+          >
+            <div className="paragraph-index">
+              #{p.index} ({formatTime(p.startTime)} – {formatTime(p.endTime)})
             </div>
-          )}
-        </article>
-      ))}
+
+            <p className="paragraph-original">
+              {renderHighlightedText(p.originalText, p.keyPhrases)}
+            </p>
+
+            <div className="paragraph-divider" />
+
+            <p className="paragraph-translated">{p.translatedText}</p>
+
+            {p.keyPhrases.length > 0 && (
+              <div className="key-phrases">
+                <div className="key-phrases-title">IELTS Key Phrases</div>
+                <ul className="key-phrases-list">
+                  {p.keyPhrases.map((kp, i) => (
+                    <li className="key-phrase-item" key={i}>
+                      <span className="key-phrase-term">{kp.phrase}</span>
+                      <span className="key-phrase-meaning">
+                        {kp.meaningJa}
+                      </span>
+                      <span className="key-phrase-note">{kp.noteJa}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </article>
+        );
+      })}
     </section>
   );
 }

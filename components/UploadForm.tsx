@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { upload } from '@vercel/blob/client';
 import type { TranscribeAudioOutput } from '@/src/application/dto/TranscribeAudioDto';
 import { TranscriptView } from './TranscriptView';
 import { WaveformPlayer } from './audio/WaveformPlayer';
+import { useAudioPlayer } from './audio/useAudioPlayer';
 
 // Whisper's own upper limit for a single audio file.
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
@@ -19,6 +20,20 @@ export function UploadForm() {
   const [result, setResult] = useState<TranscribeAudioOutput | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Shared playback state/controls: both the waveform and the transcript
+  // read from and drive this same <audio> element.
+  const player = useAudioPlayer();
+
+  const objectUrl = useMemo(
+    () => (file ? URL.createObjectURL(file) : null),
+    [file]
+  );
+  useEffect(() => {
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [objectUrl]);
 
   const pickFile = useCallback((picked: File | null) => {
     setResult(null);
@@ -133,9 +148,33 @@ export function UploadForm() {
           {file && <div className="file-name">Selected: {file.name}</div>}
         </div>
 
-        {file && <WaveformPlayer file={file} key={file.name + file.size} />}
+        {file && objectUrl && (
+          <>
+            {/* One shared <audio> element, controlled by the `player`
+                hook. Hidden because both WaveformPlayer and
+                TranscriptView provide their own play/seek UI. */}
+            <audio
+              ref={player.audioRef}
+              src={objectUrl}
+              preload="metadata"
+              onLoadedMetadata={player.handleLoadedMetadata}
+              onTimeUpdate={player.handleTimeUpdate}
+              onEnded={player.handleEnded}
+              style={{ display: 'none' }}
+            />
+            <WaveformPlayer
+              file={file}
+              player={player}
+              key={file.name + file.size}
+            />
+          </>
+        )}
 
-        <button type="submit" className="submit-button" disabled={!file || isBusy}>
+        <button
+          type="submit"
+          className="submit-button"
+          disabled={!file || isBusy}
+        >
           {status === 'uploading'
             ? `Uploading… ${uploadProgress.toFixed(0)}%`
             : status === 'transcribing'
@@ -157,7 +196,7 @@ export function UploadForm() {
         {errorMessage && <div className="error-box">{errorMessage}</div>}
       </form>
 
-      {result && <TranscriptView result={result} />}
+      {result && <TranscriptView result={result} player={player} />}
     </>
   );
 }

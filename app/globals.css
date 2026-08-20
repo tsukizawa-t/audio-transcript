@@ -242,6 +242,32 @@ body {
   border-radius: var(--radius);
   padding: 20px 22px;
   margin-bottom: 16px;
+  cursor: pointer;
+  transition: opacity 0.2s ease, border-color 0.2s ease,
+    background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.paragraph:hover {
+  border-color: var(--color-accent);
+}
+
+.paragraph:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.paragraph-active {
+  border-color: var(--color-accent);
+  background: var(--color-surface-2);
+  box-shadow: 0 0 0 1px rgba(91, 140, 255, 0.35);
+}
+
+.paragraph-inactive {
+  opacity: 0.4;
+}
+
+.paragraph-inactive:hover {
+  opacity: 0.7;
 }
 
 .paragraph-index {

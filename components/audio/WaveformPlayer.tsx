@@ -1,13 +1,8 @@
 'use client';
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { decodeWaveformPeaks } from './decodeWaveformPeaks';
+import type { AudioPlayerApi } from './useAudioPlayer';
 
 const BAR_COUNT = 400;
 const SEEK_STEP_SEC = 3;
@@ -22,30 +17,35 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toFixed(2).padStart(5, '0')}`;
 }
 
-function isTypingTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  const tag = target.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
-}
-
-export function WaveformPlayer({ file }: { file: File }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+/**
+ * Renders the waveform canvas and playback controls. All actual audio
+ * state lives in the shared `player` (see useAudioPlayer), so this
+ * component stays in sync with whatever else is driving playback (e.g.
+ * clicking a paragraph in the transcript).
+ */
+export function WaveformPlayer({
+  file,
+  player,
+}: {
+  file: File;
+  player: AudioPlayerApi;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const rafRef = useRef<number | null>(null);
 
   const [peaks, setPeaks] = useState<number[] | null>(null);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState(1);
   const [canvasWidth, setCanvasWidth] = useState(760);
 
-  const objectUrl = useMemo(() => URL.createObjectURL(file), [file]);
-
-  useEffect(() => {
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [objectUrl]);
+  const {
+    duration,
+    currentTime,
+    isPlaying,
+    playbackRate,
+    togglePlay,
+    seekBy,
+    seekToFraction,
+    changeSpeed,
+  } = player;
 
   // Generate waveform data
   useEffect(() => {
@@ -117,61 +117,6 @@ export function WaveformPlayer({ file }: { file: File }) {
     draw();
   }, [draw]);
 
-  // While playing, update the current time every frame to advance the waveform coloring
-  useEffect(() => {
-    if (!isPlaying) {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      return;
-    }
-
-    const tick = () => {
-      const audio = audioRef.current;
-      if (audio) setCurrentTime(audio.currentTime);
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [isPlaying]);
-
-  const togglePlay = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (audio.paused) {
-      void audio.play();
-      setIsPlaying(true);
-    } else {
-      audio.pause();
-      setIsPlaying(false);
-    }
-  }, []);
-
-  const seekBy = useCallback((deltaSec: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const next = Math.min(
-      Math.max(0, audio.currentTime + deltaSec),
-      audio.duration || 0
-    );
-    audio.currentTime = next;
-    setCurrentTime(next);
-  }, []);
-
-  const seekToFraction = useCallback(
-    (fraction: number) => {
-      const audio = audioRef.current;
-      if (!audio || !duration) return;
-      const next = Math.min(Math.max(0, fraction), 1) * duration;
-      audio.currentTime = next;
-      setCurrentTime(next);
-      void audio.play();
-      setIsPlaying(true);
-    },
-    [duration]
-  );
-
   const handleCanvasClick = useCallback(
     (event: React.MouseEvent<HTMLCanvasElement>) => {
       const rect = event.currentTarget.getBoundingClientRect();
@@ -181,47 +126,8 @@ export function WaveformPlayer({ file }: { file: File }) {
     [seekToFraction]
   );
 
-  const changeSpeed = useCallback((value: number) => {
-    const audio = audioRef.current;
-    const clamped = Math.min(SPEED_MAX, Math.max(SPEED_MIN, value));
-    if (audio) audio.playbackRate = clamped;
-    setPlaybackRate(clamped);
-  }, []);
-
-  // Keyboard shortcuts: Space = play/pause, ArrowLeft = back 3s, ArrowRight = forward 3s
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (isTypingTarget(event.target)) return;
-
-      if (event.code === 'Space') {
-        event.preventDefault();
-        togglePlay();
-      } else if (event.code === 'ArrowLeft') {
-        event.preventDefault();
-        seekBy(-SEEK_STEP_SEC);
-      } else if (event.code === 'ArrowRight') {
-        event.preventDefault();
-        seekBy(SEEK_STEP_SEC);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [togglePlay, seekBy]);
-
   return (
     <div className="waveform-player" ref={containerRef}>
-      <audio
-        ref={audioRef}
-        src={objectUrl}
-        preload="metadata"
-        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-        onTimeUpdate={(e) => {
-          if (!isPlaying) setCurrentTime(e.currentTarget.currentTime);
-        }}
-        onEnded={() => setIsPlaying(false)}
-      />
-
       <div className="waveform-time">
         {formatTime(currentTime)} / {formatTime(duration)}
       </div>
