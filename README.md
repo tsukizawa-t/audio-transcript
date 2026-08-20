@@ -8,11 +8,19 @@ A serverless web app for English learning. Upload an MP3 audio file and it will:
 4. Let you **play the audio back with a waveform player** — click to seek, change speed,
    and use keyboard shortcuts
 
-It runs as a Next.js App Router Route Handler (i.e. a serverless function) on Vercel,
-so no separate backend server is required.
+Files are uploaded directly from the browser to [Vercel Blob](https://vercel.com/docs/storage/vercel-blob)
+storage, bypassing the request body limit that would otherwise apply to a
+serverless function. The app runs as Next.js App Router Route Handlers
+(i.e. serverless functions) on Vercel, so no separate backend server is
+required.
 
 ## Features
 
+- **Large-file friendly upload**
+  - Files upload directly from the browser to Vercel Blob storage, never through
+    the serverless function's request body, so files up to Whisper's own 25MB limit
+    work fine (Vercel's ~4.5MB serverless request body limit no longer applies)
+  - The temporary blob is deleted automatically right after transcription
 - **Waveform player**
   - Renders the uploaded MP3 as a waveform (decoded client-side with the Web Audio API)
   - The waveform changes color as playback progresses (played vs. unplayed)
@@ -45,7 +53,8 @@ src/
     config/            Environment variable loading, DI container (composition root)
 
 app/                  Presentation layer (Next.js App Router)
-  api/transcribe/route.ts   Thin HTTP controller — parses the request, calls the use case
+  api/upload/route.ts       Issues short-lived tokens for direct browser-to-Blob uploads
+  api/transcribe/route.ts   Thin HTTP controller — fetches the uploaded blob, calls the use case
   page.tsx / layout.tsx     Pages
 
 components/          UI components (client-side)
@@ -86,8 +95,12 @@ Open `.env.local` and set your OpenAI API key.
 | Variable | Required | Description |
 | --- | --- | --- |
 | `OPENAI_API_KEY` | ✅ | Generate one at https://platform.openai.com/api-keys |
+| `BLOB_READ_WRITE_TOKEN` | ✅ (local dev only*) | Vercel Blob token for direct uploads. Auto-injected on Vercel once a Blob store is connected; for local dev, copy it from the dashboard's Storage tab |
 | `PARAGRAPH_GAP_THRESHOLD_SEC` | - | Silence gap (seconds) treated as a paragraph break. Default `1.5` |
 | `MAX_UPLOAD_SIZE_MB` | - | Max upload size in MB. Default `25` (the Whisper API's own limit) |
+
+\* On Vercel, this is set automatically once you connect a Blob store to the
+project (see the deploy steps below) — you don't need to add it manually.
 
 ### 3. Run locally
 
@@ -101,21 +114,26 @@ Open http://localhost:3000 and upload an MP3 file.
 
 1. Import this repository into Vercel
 2. Set `OPENAI_API_KEY` under Project Settings → Environment Variables
-3. Deploy
+3. Go to the project's **Storage** tab → **Create Database** → **Blob**, and connect
+   it to this project. This automatically adds `BLOB_READ_WRITE_TOKEN` to your
+   environment variables — no manual copy/paste needed.
+4. Deploy
 
-The Route Handler specifies `export const runtime = 'nodejs'`, so it is deployed as a
-Node.js runtime serverless function.
+Both Route Handlers specify `export const runtime = 'nodejs'`, so they are deployed
+as Node.js runtime serverless functions.
 
 ### Known limitations
 
-- **Vercel request body size limit**: serverless functions on the Hobby/Pro plans have
-  a request body size limit (roughly 4.5MB on the free tier). If you need to handle
-  larger MP3 files, consider uploading to [Vercel Blob](https://vercel.com/docs/storage/vercel-blob)
-  first and having the server fetch it from there instead.
-- **Execution time limit**: `maxDuration` is set to 60 seconds, but the actual cap
-  depends on your plan. For long recordings, check your plan's limits or consider
-  making transcription an async job (queue + webhook notification).
-- The Whisper API itself has a 25MB file size limit.
+- **File size**: capped at 25MB, matching the Whisper API's own limit
+  (`MAX_UPLOAD_SIZE_MB` in `.env.example`). Because uploads go directly to Blob
+  storage, Vercel's serverless request body limit (~4.5MB) no longer applies.
+- **Execution time limit**: `maxDuration` on `/api/transcribe` is set to 60 seconds,
+  but the actual cap depends on your plan. For long recordings, check your plan's
+  limits or consider making transcription an async job (queue + webhook notification).
+- **Blob storage cost**: uploaded files are stored temporarily and deleted right
+  after transcription completes (or fails). If a request is interrupted before that
+  cleanup runs, an orphaned blob may remain — Vercel Blob's dashboard lets you view
+  and delete these manually if needed.
 
 ## Verifying the build (type-check & build)
 

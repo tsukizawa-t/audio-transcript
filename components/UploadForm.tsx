@@ -1,15 +1,20 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
+import { upload } from '@vercel/blob/client';
 import type { TranscribeAudioOutput } from '@/src/application/dto/TranscribeAudioDto';
 import { TranscriptView } from './TranscriptView';
 import { WaveformPlayer } from './audio/WaveformPlayer';
 
-type Status = 'idle' | 'uploading' | 'error';
+// Whisper's own upper limit for a single audio file.
+const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
+
+type Status = 'idle' | 'uploading' | 'transcribing' | 'error';
 
 export function UploadForm() {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<Status>('idle');
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<TranscribeAudioOutput | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -24,6 +29,15 @@ export function UploadForm() {
     }
     if (!picked.name.toLowerCase().endsWith('.mp3')) {
       setErrorMessage('Please select a .mp3 file');
+      setFile(null);
+      return;
+    }
+    if (picked.size > MAX_FILE_SIZE_BYTES) {
+      setErrorMessage(
+        `File is too large: ${(picked.size / 1024 / 1024).toFixed(
+          1
+        )}MB (limit ${(MAX_FILE_SIZE_BYTES / 1024 / 1024).toFixed(0)}MB)`
+      );
       setFile(null);
       return;
     }
@@ -46,16 +60,33 @@ export function UploadForm() {
       if (!file) return;
 
       setStatus('uploading');
+      setUploadProgress(0);
       setErrorMessage(null);
       setResult(null);
 
       try {
-        const formData = new FormData();
-        formData.append('audio', file);
+        // Upload straight from the browser to Blob storage. The file
+        // never passes through our own serverless function, so it is
+        // not subject to Vercel's ~4.5MB request body limit.
+        const blob = await upload(file.name, file, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+          contentType: file.type || 'audio/mpeg',
+          onUploadProgress: (event) => {
+            setUploadProgress(event.percentage);
+          },
+        });
+
+        setStatus('transcribing');
 
         const response = await fetch('/api/transcribe', {
           method: 'POST',
-          body: formData,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            blobUrl: blob.url,
+            filename: file.name,
+            mimeType: file.type || 'audio/mpeg',
+          }),
         });
 
         const body = await response.json();
@@ -76,7 +107,7 @@ export function UploadForm() {
     [file]
   );
 
-  const isUploading = status === 'uploading';
+  const isBusy = status === 'uploading' || status === 'transcribing';
 
   return (
     <>
@@ -104,19 +135,21 @@ export function UploadForm() {
 
         {file && <WaveformPlayer file={file} key={file.name + file.size} />}
 
-        <button
-          type="submit"
-          className="submit-button"
-          disabled={!file || isUploading}
-        >
-          {isUploading ? 'Transcribing…' : 'Start Transcription'}
+        <button type="submit" className="submit-button" disabled={!file || isBusy}>
+          {status === 'uploading'
+            ? `Uploading… ${uploadProgress.toFixed(0)}%`
+            : status === 'transcribing'
+              ? 'Transcribing…'
+              : 'Start Transcription'}
         </button>
 
-        {isUploading && (
+        {isBusy && (
           <div className="status-row">
             <span className="spinner" aria-hidden />
             <span>
-              This can take anywhere from a few seconds to a few minutes, depending on the audio length
+              {status === 'uploading'
+                ? 'Uploading your file directly to storage'
+                : 'This can take anywhere from a few seconds to a few minutes, depending on the audio length'}
             </span>
           </div>
         )}
