@@ -1,21 +1,32 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { upload } from '@vercel/blob/client';
 import type { TranscribeAudioOutput } from '@/src/application/dto/TranscribeAudioDto';
+import { createTranscribeAudioUseCase } from '@/src/infrastructure/config/clientContainer';
 import { TranscriptView } from './TranscriptView';
 import { WaveformPlayer } from './audio/WaveformPlayer';
 import { useAudioPlayer } from './audio/useAudioPlayer';
 
-// Whisper's own upper limit for a single audio file.
+// A generous cap on file size for in-browser processing; the actual
+// Whisper model itself has no hard limit, but very long files take a
+// long time to transcribe on typical hardware.
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
-type Status = 'idle' | 'uploading' | 'transcribing' | 'error';
+type Status =
+  | 'idle'
+  | 'loading-model'
+  | 'transcribing'
+  | 'annotating'
+  | 'error';
 
 export function UploadForm() {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<Status>('idle');
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [modelLoadPercent, setModelLoadPercent] = useState(0);
+  const [annotateProgress, setAnnotateProgress] = useState({
+    current: 0,
+    total: 0,
+  });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<TranscribeAudioOutput | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -74,43 +85,36 @@ export function UploadForm() {
       event.preventDefault();
       if (!file) return;
 
-      setStatus('uploading');
-      setUploadProgress(0);
+      setStatus('loading-model');
+      setModelLoadPercent(0);
+      setAnnotateProgress({ current: 0, total: 0 });
       setErrorMessage(null);
       setResult(null);
 
       try {
-        // Upload straight from the browser to Blob storage. The file
-        // never passes through our own serverless function, so it is
-        // not subject to Vercel's ~4.5MB request body limit.
-        const blob = await upload(file.name, file, {
-          access: 'public',
-          handleUploadUrl: '/api/upload',
-          contentType: file.type || 'audio/mpeg',
-          onUploadProgress: (event) => {
-            setUploadProgress(event.percentage);
-          },
+        // Everything below runs entirely in this browser tab: speech
+        // recognition, translation, and IELTS phrase matching. Nothing
+        // is uploaded anywhere.
+        const useCase = createTranscribeAudioUseCase((percent) => {
+          setModelLoadPercent(percent);
         });
 
-        setStatus('transcribing');
+        const output = await useCase.execute(
+          { filename: file.name, mimeType: file.type || 'audio/mpeg', data: file },
+          (progress) => {
+            if (progress.stage === 'transcribing') {
+              setStatus('transcribing');
+            } else if (progress.stage === 'annotating') {
+              setStatus('annotating');
+              setAnnotateProgress({
+                current: progress.current,
+                total: progress.total,
+              });
+            }
+          }
+        );
 
-        const response = await fetch('/api/transcribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            blobUrl: blob.url,
-            filename: file.name,
-            mimeType: file.type || 'audio/mpeg',
-          }),
-        });
-
-        const body = await response.json();
-
-        if (!response.ok) {
-          throw new Error(body?.error ?? 'An unknown error occurred');
-        }
-
-        setResult(body as TranscribeAudioOutput);
+        setResult(output);
         setStatus('idle');
       } catch (error) {
         setErrorMessage(
@@ -122,7 +126,21 @@ export function UploadForm() {
     [file]
   );
 
-  const isBusy = status === 'uploading' || status === 'transcribing';
+  const isBusy =
+    status === 'loading-model' ||
+    status === 'transcribing' ||
+    status === 'annotating';
+
+  const busyLabel =
+    status === 'loading-model'
+      ? modelLoadPercent > 0
+        ? `Loading speech model… ${modelLoadPercent}%`
+        : 'Loading speech model…'
+      : status === 'transcribing'
+        ? 'Transcribing…'
+        : status === 'annotating'
+          ? `Translating paragraph ${annotateProgress.current}/${annotateProgress.total}…`
+          : 'Start Transcription';
 
   return (
     <>
@@ -175,20 +193,18 @@ export function UploadForm() {
           className="submit-button"
           disabled={!file || isBusy}
         >
-          {status === 'uploading'
-            ? `Uploading… ${uploadProgress.toFixed(0)}%`
-            : status === 'transcribing'
-              ? 'Transcribing…'
-              : 'Start Transcription'}
+          {busyLabel}
         </button>
 
         {isBusy && (
           <div className="status-row">
             <span className="spinner" aria-hidden />
             <span>
-              {status === 'uploading'
-                ? 'Uploading your file directly to storage'
-                : 'This can take anywhere from a few seconds to a few minutes, depending on the audio length'}
+              {status === 'loading-model'
+                ? 'First use downloads a speech-recognition model to your browser (cached afterwards, no cost)'
+                : status === 'transcribing'
+                  ? 'Running speech recognition locally in your browser — this can take a while for longer files'
+                  : 'Translating each paragraph and checking it against the IELTS phrase list'}
             </span>
           </div>
         )}

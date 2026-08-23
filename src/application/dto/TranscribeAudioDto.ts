@@ -1,7 +1,7 @@
 export interface TranscribeAudioInput {
   readonly filename: string;
   readonly mimeType: string;
-  readonly data: Buffer;
+  readonly data: Blob;
 }
 
 export interface KeyPhraseDto {
@@ -24,3 +24,13 @@ export interface TranscribeAudioOutput {
   readonly durationSec: number;
   readonly paragraphs: ParagraphDto[];
 }
+
+/** Progress events the use case reports so the UI can show what's happening. */
+export type TranscribeAudioProgress =
+  | { stage: 'loading-model'; percent: number }
+  | { stage: 'transcribing' }
+  | { stage: 'annotating'; current: number; total: number };
+
+export type TranscribeAudioProgressCallback = (
+  progress: TranscribeAudioProgress
+) => void;

@@ -1,13 +1,14 @@
 /**
- * A value object representing an uploaded audio file. Deliberately
- * independent of infrastructure types such as the Web API's File or
- * Node.js's Buffer.
+ * A value object representing an uploaded audio file. Uses Blob (a
+ * standard, browser-and-Node-compatible binary container) rather than
+ * a framework-specific type, since audio processing now runs entirely
+ * client-side.
  */
 export interface AudioFile {
   readonly filename: string;
   readonly mimeType: string;
   readonly sizeBytes: number;
-  readonly data: Buffer;
+  readonly data: Blob;
 }
 
 export const SUPPORTED_MIME_TYPES = [
